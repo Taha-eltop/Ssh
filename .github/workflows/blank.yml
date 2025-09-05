@@ -1,0 +1,18 @@
+name: VPS SSH with Ngrok
+
+on: workflow_dispatch
+
+jobs:
+  ssh-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH & Ngrok
+        run: |
+          sudo apt update && sudo apt install -y openssh-server wget unzip
+          wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+          unzip ngrok-stable-linux-amd64.zip
+          ./ngrok authtoken ${{ secrets.NGROK_AUTH }}
+          sudo service ssh start
+          ./ngrok tcp 22 &
+      - name: Show SSH details
+        run: sleep 10 && curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'

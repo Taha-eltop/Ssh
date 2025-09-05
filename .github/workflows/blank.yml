@@ -3,22 +3,35 @@ name: Free VPS via SSH with Ngrok
 on: workflow_dispatch
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt update && sudo apt install -y openssh-server wget unzip jq
-          sudo service ssh start
-      - name: Download ngrok
-        run: |
-          wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
-          unzip ngrok-stable-linux-amd64.zip
-      - name: Configure ngrok
-        run: ./ngrok authtoken ${{ secrets.NGROK_AUTH }}
-      - name: Start ngrok tunnel
-        run: ./ngrok tcp 22 &
-      - name: Show SSH connection info
-        run: |
-          sleep 5
-          curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y openssh-server wget tar jq
+          sudo systemctl enable ssh
+          sudo systemctl start ssh
+
+      - name: Create user "taha"
+        run: |
+          sudo useradd -m taha
+          echo 'taha:pass123' | sudo chpasswd
+          sudo usermod -aG sudo taha
+
+      - name: Download ngrok v3
+        run: |
+          wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz
+          tar -xvzf ngrok.tgz
+
+      - name: Configure ngrok
+        run: ./ngrok config add-authtoken ${{ secrets.NGROK_AUTH }}
+
+      - name: Start ngrok tunnel
+        run: ./ngrok tcp 22 --log=stdout > ngrok.log &
+      
+      - name: Show SSH connection info
+        run: |
+          sleep 5
+          curl -s http://127.0.0.1:4040/api/tunnel
+s | jq -r '.tunnels[0].public_url'
